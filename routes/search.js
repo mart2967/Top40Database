@@ -4,8 +4,8 @@
 var Song = require('../schemas').Song;
 
 exports.search = function(req, res){
-    //console.log(req.query);
-    var query = req.query.input;
+    //console.log(req);
+    var query = req.query.term;
     console.log(query);
     var result = runSearch(query, function(result){
         res.send(result);
@@ -13,21 +13,19 @@ exports.search = function(req, res){
 }
 
 
-runSearch = function(input, callback){
+var runSearch = function(input, callback){
     var flags = 'i';
     input = regexEscape(input);
     var regex = new RegExp(input, flags);
     console.log(regex);
-    Song.find( { $or:[ { artist: regex }, { title: regex } ] }, function(error, result) {
-        console.log(result);
+    var tenYears = new Date();
+    tenYears.setTime(tenYears.valueOf() - 10 * 365 * 24 * 60 * 60 * 1000);
+    Song.find( { $or:[ { artist: regex }, { title: regex } ], 'weeksAndRanks.week': {$gt: tenYears} }, {/* FIELDS, all */}, { limit: 12 }, function(error, result) {
+        //console.log(result);
         callback(result);
     } );
 }
 
-filterSongs = function(songs){
-
-}
-
-regexEscape = function(str) {
+var regexEscape = function(str) {
     return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 }

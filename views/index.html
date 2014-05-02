@@ -1,11 +1,33 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>{{ title }}</title>
-    <link rel='stylesheet' href='/stylesheets/style.css' />
-  </head>
-  <body>
-    <h1>{{ title }}</h1>
-    <p>Welcome to {{ title }}</p>
-  </body>
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Top 40 Search</title>
+
+    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+    <script src="http://underscorejs.org/underscore-min.js"></script>
+    <script src="http://backbonejs.org/backbone-min.js"></script>
+    <script src="/js/pageView.js"></script>
+    <script src="/js/songView.js"></script>
+
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+
+    <script>
+        $(document).ready(function(){
+            var page = new PageView();
+        });
+    </script>
+</head>
+<body>
+<div class="container">
+    <div class="well col-lg-12" style="margin-top: 15px">
+        <input class="form-control" id="songs" placeholder="Search by Song or Artist">
+    </div>
+    <div id="results">
+
+
+    </div>
+
+</div>
+</body>
 </html>

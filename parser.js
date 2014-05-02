@@ -8,11 +8,10 @@ var async = require('async');
 var dateObj = new Date();
 var Song = require('./schemas').Song;
 var currentYear = dateObj.getFullYear();
-var startYear = 2014;
+var startYear = 2001;
 var provider = 'http://www.at40.com';
 
-
-getMonthsFromYear = function(url, callback){
+var getMonthsFromYear = function(url, callback){
     request(url, function (error, response, body) {
         if (!error && response.statusCode == 200) {
             var $ = cheerio.load(body);
@@ -20,8 +19,6 @@ getMonthsFromYear = function(url, callback){
             $('#pagtable tr td a').each(function(){
                 urls.push(provider + $(this).attr('href'));
             });
-            //console.log("the urls: " + urls);
-
             callback(null, urls);
         } else {
             console.log(error);
@@ -29,8 +26,7 @@ getMonthsFromYear = function(url, callback){
     });
 }
 
-
-getWeeksFromMonth = function(url, callback){
+var getWeeksFromMonth = function(url, callback){
     request(url, function (error, response, body) {
         if (!error && response.statusCode == 200) {
             var $ = cheerio.load(body);
@@ -48,7 +44,7 @@ getWeeksFromMonth = function(url, callback){
     });
 }
 
-getSongsFromWeek = function(week, callback, secondCallbackLOL){
+var getSongsFromWeek = function(week, callback, secondCallbackLOL){
     var url = week.path;
     request(url, function (error, response, body) {
         if (!error && response.statusCode == 200) {
@@ -87,7 +83,6 @@ getSongsFromWeek = function(week, callback, secondCallbackLOL){
                             }
                             break;
                     }
-
                 });
 
                 if(JSON.stringify(song)!='{}' && !isNaN(song.rank)) {
@@ -102,9 +97,8 @@ getSongsFromWeek = function(week, callback, secondCallbackLOL){
     });
 }
 
-processMonths = function(urls, callback){
+var processMonths = function(urls, callback){
     async.mapSeries(urls, getWeeksFromMonth, function(error, result){
-        //console.log("map getWeeksFromMonth completed. Error: ", error, " result:\n", result);
         async.eachSeries(result, processWeeks, function(error){
             if(error){
                 console.log(error);
@@ -115,10 +109,9 @@ processMonths = function(urls, callback){
 
 }
 
-processWeeks = function(weeks, callback){
+var processWeeks = function(weeks, callback){
     async.eachSeries(weeks, function(week, callback){
         getSongsFromWeek(week, saveSongsToDB, callback);
-        //callback();
     }, function(error){
         if(error){
             console.log(error);
@@ -128,7 +121,7 @@ processWeeks = function(weeks, callback){
 
 }
 
-saveSongsToDB = function(songs, callback){
+var saveSongsToDB = function(songs, callback){
     async.eachSeries(songs, function(song, callback){
         Song.count({'title': song.title, 'artist': song.artist}, function(error, count){
             if(count == 0){
@@ -136,11 +129,11 @@ saveSongsToDB = function(songs, callback){
                     title: song.title,
                     artist: song.artist,
                     artistURL: song.artistURL,
-                    imageURL: song.imageURL
+                    imageURL: song.imageURL,
+                    weeksAndRanks: [{week: song.week, rank: song.rank}]
                 });
-                dbSong.weeksAndRanks.push(new Object({week: song.week, rank: song.rank}));
                 dbSong.save(function (err, item, numberAffected) {
-                    console.log('new song: %s by %s', item.title, item.artist);
+                    console.log('NEW SONG: %s by %s', item.title, item.artist);
                     callback();
                 });
             } else {
@@ -173,13 +166,43 @@ exports.parseData = function(){
             }
         });
     });
-
-
-
 }
 
-//parseData();
+exports.updateSongs = function(){
+    console.log('Checking for new songs...')
+    request('http://www.at40.com/top-40', function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var emptyWeeks = new Array();
+            var weekObj = new Object();
+            var $ = cheerio.load(body);
+            var week = $('time a').first().text();
+            //d.setTime(d.valueOf() - 7 * 24 * 60 * 60 * 1000);
+            //console.log(d);
+            weekObj.date = new Date(week);
+            weekObj.path = provider + $('time a').first().attr('href');
+            emptyWeeks.push(weekObj);
+            Song.count({'weeksAndRanks.week': weekObj.date}, function(err, result){
+                if(result == 0){
+                    console.log('Updating song list for this week...')
+                    processWeeks(emptyWeeks, function(){
+                        console.log('Week update completed.');
+                    });
+                } else {
+                    console.log('No new songs found.')
+                }
+            });
+        }
+    });
+}
 
-//exports.collateData = function(){
-//
+
+//exports.fixURLS = function(){
+//    Song.find({ imageURL: new RegExp('^/') }, function(err, songs){
+//        async.each(songs, function(song){
+////            if(song.imageURL == '/images/v3-at40-thumb.gif'){
+////                song.imageURL = '/images/notfound.jpg';
+////            }
+//        });
+//        console.log(songs);
+//    });
 //}

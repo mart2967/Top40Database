@@ -1,11 +1,5 @@
-
-/**
- * Module dependencies.
- */
-
 var express = require('express');
 var routes = require('./routes');
-var user = require('./routes/user');
 var http = require('http');
 var path = require('path');
 var parser = require('./parser');
@@ -24,10 +18,16 @@ mongoose.connect('mongodb://localhost/KUMMdb', function(){
             if(size == 0){
                 console.log('database empty, populating...');
                 parser.parseData();
+            } else {
+                parser.updateSongs();
+                var repeatEvery = 24 * 60 * 60 * 1000; // one day
+                setInterval(parser.updateSongs, repeatEvery);
             }
         }
     });
 });
+
+
 
 // all environments
 app.set('port', process.env.PORT || 3005);
@@ -47,7 +47,8 @@ if ('development' == app.get('env')) {
     app.use(express.errorHandler());
 }
 
-app.get('/', api.search);
+app.get('/search', api.search);
+app.get('/', routes.index);
 
 http.createServer(app).listen(app.get('port'), function(){
     console.log('Express server listening on port ' + app.get('port'));
